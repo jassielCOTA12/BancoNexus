@@ -1,0 +1,29 @@
+{
+  "name": "banconexus",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "backend": "cd backend && nodemon server.js",
+    "frontend": "cd frontend && PORT=3001 npm start",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jassielCOTA12/BancoNexus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jassielCOTA12/BancoNexus/issues"
+  },
+  "homepage": "https://github.com/jassielCOTA12/BancoNexus#readme",
+  "dependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
