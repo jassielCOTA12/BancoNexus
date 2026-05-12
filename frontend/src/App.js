@@ -1,145 +1,156 @@
 import { useState } from 'react';
+import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import './App.css';
+
 
 function App() {
   const [cuenta, setCuenta] = useState('');
-  const [monto, setMonto] = useState('');
-  const [datos, setDatos] = useState(null);
-  const [mensaje, setMensaje] = useState('');
+  const [montoOperacion, setMontoOperacion] = useState('');
+  const [datosCuenta, setDatosCuenta] = useState(null);
+  const [datosGrafica, setDatosGrafica] = useState([]); 
   const [error, setError] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
 
-  const mostrarMensaje = (texto, esError = false) => {
-    if (esError) {
-      setError(texto);
-      setMensaje('');
-    } else {
-      setMensaje(texto);
-      setError('');
-    }
-    setTimeout(() => {
-      setMensaje('');
-      setError('');
-    }, 4000);
-  };
-
-  const consultarCuenta = async () => {
-    if (!cuenta) {
-      mostrarMensaje('Ingresa un número de cuenta', true);
-      return;
-    }
+  //Función para Consultar
+const consultarCuenta = async (numeroCuenta = cuenta) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/cuenta/${cuenta}`);
-      const data = await res.json();
-      if (!res.ok) {
-        mostrarMensaje(data.error || 'Error al consultar', true);
-        setDatos(null);
-        return;
-      }
-      setDatos(data);
-      mostrarMensaje('Cuenta consultada correctamente');
+      setError('');
+      setMensajeExito('');
+      
+      //Pedimos los datos generales
+      const resCuenta = await fetch(`http://localhost:3000/api/cuenta/${numeroCuenta}`);
+      if (!resCuenta.ok) throw new Error('No se encontró la cuenta.');
+      const dataCuenta = await resCuenta.json();
+      setDatosCuenta(dataCuenta);
+
+     // Pedimos el historial
+      const resHistorial = await fetch(`http://localhost:3000/api/historial/${numeroCuenta}`);
+      const dataHistorial = await resHistorial.json();
+      const formateado = dataHistorial.map(t => {
+        const fechaObj = new Date(t.fecha);
+        return {
+          fecha: fechaObj.toLocaleString(), 
+          saldo: t.saldo
+        };
+      });
+      
+      setDatosGrafica(formateado);
+      
+      setDatosGrafica(formateado);
+      
     } catch (err) {
-      mostrarMensaje('No se pudo conectar con el servidor', true);
+      setError(err.message);
+      setDatosCuenta(null);
+      setDatosGrafica([]);
     }
   };
 
-  const depositar = async () => {
-    if (!cuenta || !monto) {
-      mostrarMensaje('Ingresa cuenta y monto', true);
-      return;
-    }
+  //Función para Depositar o Retirar
+  const realizarOperacion = async (tipoOperacion) => {
     try {
-      const res = await fetch('http://localhost:3000/api/deposito', {
+      setError('');
+      setMensajeExito('');
+      
+      const monto = parseFloat(montoOperacion);
+      if (!monto || monto <= 0) throw new Error('Ingresa un monto válido mayor a 0');
+
+      const res = await fetch(`http://localhost:3000/api/${tipoOperacion}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuenta, monto: Number(monto) })
+        body: JSON.stringify({ 
+          cuenta: datosCuenta.cuenta.cuenta, 
+          monto: monto 
+        })
       });
-      const data = await res.json();
-      if (!res.ok) {
-        mostrarMensaje(data.error || 'Error en el depósito', true);
-        return;
-      }
-      mostrarMensaje(`Depósito exitoso. Nuevo saldo: $${data.saldo}`);
-      setMonto('');
-      consultarCuenta();
-    } catch (err) {
-      mostrarMensaje('No se pudo conectar con el servidor', true);
-    }
-  };
 
-  const retirar = async () => {
-    if (!cuenta || !monto) {
-      mostrarMensaje('Ingresa cuenta y monto', true);
-      return;
-    }
-    try {
-      const res = await fetch('http://localhost:3000/api/retiro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cuenta, monto: Number(monto) })
-      });
       const data = await res.json();
-      if (!res.ok) {
-        mostrarMensaje(data.error || 'Error en el retiro', true);
-        return;
-      }
-      mostrarMensaje(`Retiro exitoso. Nuevo saldo: $${data.saldo}`);
-      setMonto('');
-      consultarCuenta();
+
+      if (!res.ok) throw new Error(data.error);
+
+      setMensajeExito(data.mensaje);
+      setMontoOperacion('');
+      
+      // Volvemos a consultar para actualizar el saldo y la gráfica en tiempo real
+      consultarCuenta(datosCuenta.cuenta.cuenta);
+
     } catch (err) {
-      mostrarMensaje('No se pudo conectar con el servidor', true);
+      setError(err.message);
     }
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
-      <h2>Banco Nexus</h2>
+    <div className="banco-container">
+      <header className="banco-header">
+        <h1>Banco Nexus</h1>
+        <p>Tu portal financiero seguro</p>
+      </header>
 
-      <div style={{ marginBottom: '10px' }}>
-        <input
-          placeholder="Número de cuenta"
-          value={cuenta}
-          onChange={(e) => setCuenta(e.target.value)}
-          style={{ padding: '8px', width: '200px', marginRight: '10px' }}
-        />
-        <button onClick={consultarCuenta} style={{ padding: '8px 16px' }}>
-          Consultar
-        </button>
-      </div>
+      <main className="banco-main">
+        {/* PANEL DE BÚSQUEDA */}
+        <section className="panel-consulta">
+          <h2>Consulta de Cuenta</h2>
+          <div className="input-group">
+            <input 
+              type="text" 
+              placeholder="Número de cuenta (Ej. 001)" 
+              value={cuenta}
+              onChange={(e) => setCuenta(e.target.value)}
+            />
+            <button onClick={() => consultarCuenta(cuenta)}>Buscar</button>
+          </div>
 
-      {mensaje && <div style={{ color: 'green', marginBottom: '10px' }}>{mensaje}</div>}
-      {error && <div style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+          {error && <p className="mensaje-error">{error}</p>}
+          {mensajeExito && <p className="mensaje-exito">{mensajeExito}</p>}
+        </section>
 
-      {datos && (
-        <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-          <h3>Cliente: {datos.cliente?.nombre || 'Desconocido'}</h3>
-          <h3>Saldo: ${datos.cuenta.saldo}</h3>
+        {/* SI LA CUENTA EXISTE, MOSTRAMOS TODO ESTO */}
+        {datosCuenta && (
+          <>
+            <div className="resultados-consulta">
+              <div className="info-cliente">
+                <p><strong>Titular:</strong> {datosCuenta.cliente.nombre}</p>
+                <p><strong>CURP:</strong> {datosCuenta.cliente.curp}</p>
+              </div>
+              <div className="info-saldo">
+                <p>Saldo Actual</p>
+                <h3>${datosCuenta.cuenta.saldo}</h3>
+              </div>
+            </div>
 
-          <h4>Transacciones:</h4>
-          <ul>
-            {datos.transacciones.map((t, i) => (
-              <li key={i}>
-                {t.tipo} - ${t.monto} - {new Date(t.fecha).toLocaleString()}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            {/* PANEL DE OPERACIONES */}
+            <section className="panel-operaciones">
+              <h2>Realizar Movimiento</h2>
+              <div className="input-group">
+                <input 
+                  type="number" 
+                  placeholder="Monto a operar ($)" 
+                  value={montoOperacion}
+                  onChange={(e) => setMontoOperacion(e.target.value)}
+                />
+                <button className="btn-deposito" onClick={() => realizarOperacion('deposito')}>Depositar</button>
+                <button className="btn-retiro" onClick={() => realizarOperacion('retiro')}>Retirar</button>
+              </div>
+            </section>
 
-      <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px' }}>
-        <h4>Operaciones</h4>
-        <input
-          placeholder="Monto"
-          type="number"
-          value={monto}
-          onChange={(e) => setMonto(e.target.value)}
-          style={{ padding: '8px', width: '150px', marginRight: '10px' }}
-        />
-        <button onClick={depositar} style={{ padding: '8px 16px', marginRight: '10px' }}>
-          Depositar
-        </button>
-        <button onClick={retirar} style={{ padding: '8px 16px' }}>
-          Retirar
-        </button>
-      </div>
+            {/* GRÁFICA DE HISTORIAL */}
+            <section className="panel-grafica">
+              <h2>Evolución de Saldo</h2>
+              <div style={{ width: '100%', height: 250, marginTop: '20px' }}>
+                <ResponsiveContainer>
+                  {/* Pasamos el estado de datosGrafica */}
+                  <LineChart data={datosGrafica}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="fecha" style={{ fontSize: '12px' }}/>
+                    <YAxis style={{ fontSize: '12px' }} domain={['dataMin - 1000', 'dataMax + 1000']}/>
+                    <Tooltip />
+                    <Line type="monotone" dataKey="saldo" stroke="#1e3a8a" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </>
+        )}
+      </main>
     </div>
   );
 }
