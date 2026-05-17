@@ -19,138 +19,158 @@ const db = client.db('banco_nexus');
 
 // Ruta para consultar cuenta
 app.get('/api/cuenta/:cuenta', async (req, res) => {
-  const cuenta = req.params.cuenta;
+  try {
+    const cuenta = req.params.cuenta;
 
-  const cuentaData = await db.collection('cuentas').findOne({ cuenta });
+    const cuentaData = await db.collection('cuentas').findOne({ cuenta });
 
-  if (!cuentaData) {
-    return res.status(404).json({ error: 'Cuenta no encontrada' });
+    if (!cuentaData) {
+      return res.status(404).json({ error: 'Cuenta no encontrada' });
+    }
+
+    const transacciones = await db
+      .collection('transacciones')
+      .find({ cuenta })
+      .toArray();
+
+    const clienteData = await db.collection('clientes').findOne({ curp: cuentaData.cliente });
+
+    res.json({
+      cuenta: cuentaData,
+      cliente: clienteData,
+      transacciones
+    });
+  } catch (error) {
+    console.error('Error en /api/cuenta:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-
-  const transacciones = await db
-    .collection('transacciones')
-    .find({ cuenta })
-    .toArray();
-
-  const clienteData = await db.collection('clientes').findOne({ curp: cuentaData.cliente });
-
-  res.json({
-    cuenta: cuentaData,
-    cliente: clienteData,
-    transacciones
-  });
 });
 
 // Ruta para depositar
 app.post('/api/deposito', async (req, res) => {
-  const { cuenta, monto } = req.body;
+  try {
+    const { cuenta, monto } = req.body;
 
-  if (!cuenta || monto == null) {
-    return res.status(400).json({ error: 'Faltan campos: cuenta y monto son requeridos' });
+    if (!cuenta || monto == null) {
+      return res.status(400).json({ error: 'Faltan campos: cuenta y monto son requeridos' });
+    }
+
+    if (typeof monto !== 'number' || monto <= 0) {
+      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+    }
+
+    const cuentaData = await db.collection('cuentas').findOne({ cuenta });
+
+    if (!cuentaData) {
+      return res.status(404).json({ error: 'Cuenta no encontrada' });
+    }
+
+    const nuevoSaldo = cuentaData.saldo + monto;
+
+    await db.collection('cuentas').updateOne(
+      { cuenta },
+      { $set: { saldo: nuevoSaldo } }
+    );
+
+    await db.collection('transacciones').insertOne({
+      cuenta,
+      tipo: 'deposito',
+      monto,
+      fecha: new Date()
+    });
+
+    res.json({ mensaje: 'Depósito exitoso', saldo: nuevoSaldo });
+  } catch (error) {
+    console.error('Error en /api/deposito:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-
-  if (typeof monto !== 'number' || monto <= 0) {
-    return res.status(400).json({ error: 'El monto debe ser un número positivo' });
-  }
-
-  const cuentaData = await db.collection('cuentas').findOne({ cuenta });
-
-  if (!cuentaData) {
-    return res.status(404).json({ error: 'Cuenta no encontrada' });
-  }
-
-  const nuevoSaldo = cuentaData.saldo + monto;
-
-  await db.collection('cuentas').updateOne(
-    { cuenta },
-    { $set: { saldo: nuevoSaldo } }
-  );
-
-  await db.collection('transacciones').insertOne({
-    cuenta,
-    tipo: 'deposito',
-    monto,
-    fecha: new Date()
-  });
-
-  res.json({ mensaje: 'Depósito exitoso', saldo: nuevoSaldo });
 });
 
 // Ruta para retirar
 app.post('/api/retiro', async (req, res) => {
-  const { cuenta, monto } = req.body;
+  try {
+    const { cuenta, monto } = req.body;
 
-  if (!cuenta || monto == null) {
-    return res.status(400).json({ error: 'Faltan campos: cuenta y monto son requeridos' });
+    if (!cuenta || monto == null) {
+      return res.status(400).json({ error: 'Faltan campos: cuenta y monto son requeridos' });
+    }
+
+    if (typeof monto !== 'number' || monto <= 0) {
+      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+    }
+
+    const cuentaData = await db.collection('cuentas').findOne({ cuenta });
+
+    if (!cuentaData) {
+      return res.status(404).json({ error: 'Cuenta no encontrada' });
+    }
+
+    if (cuentaData.saldo < monto) {
+      return res.status(400).json({ error: 'Saldo insuficiente' });
+    }
+
+    const nuevoSaldo = cuentaData.saldo - monto;
+
+    await db.collection('cuentas').updateOne(
+      { cuenta },
+      { $set: { saldo: nuevoSaldo } }
+    );
+
+    await db.collection('transacciones').insertOne({
+      cuenta,
+      tipo: 'retiro',
+      monto,
+      fecha: new Date()
+    });
+
+    res.json({ mensaje: 'Retiro exitoso', saldo: nuevoSaldo });
+  } catch (error) {
+    console.error('Error en /api/retiro:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-
-  if (typeof monto !== 'number' || monto <= 0) {
-    return res.status(400).json({ error: 'El monto debe ser un número positivo' });
-  }
-
-  const cuentaData = await db.collection('cuentas').findOne({ cuenta });
-
-  if (!cuentaData) {
-    return res.status(404).json({ error: 'Cuenta no encontrada' });
-  }
-
-  if (cuentaData.saldo < monto) {
-    return res.status(400).json({ error: 'Saldo insuficiente' });
-  }
-
-  const nuevoSaldo = cuentaData.saldo - monto;
-
-  await db.collection('cuentas').updateOne(
-    { cuenta },
-    { $set: { saldo: nuevoSaldo } }
-  );
-
-  await db.collection('transacciones').insertOne({
-    cuenta,
-    tipo: 'retiro',
-    monto,
-    fecha: new Date()
-  });
-
-  res.json({ mensaje: 'Retiro exitoso', saldo: nuevoSaldo });
 });
 
 // Ruta para obtener el historial evolutivo del saldo
 app.get('/api/historial/:cuenta', async (req, res) => {
-  const cuenta = req.params.cuenta;
-  
-  // Traemos la cuenta y sus transacciones
-  const cuentaData = await db.collection('cuentas').findOne({ cuenta });
-  if (!cuentaData) return res.status(404).json({ error: 'Cuenta no encontrada' });
+  try {
+    const cuenta = req.params.cuenta;
+    
+    const cuentaData = await db.collection('cuentas').findOne({ cuenta });
+    if (!cuentaData) return res.status(404).json({ error: 'Cuenta no encontrada' });
 
-  const transacciones = await db.collection('transacciones').find({ cuenta }).sort({ fecha: 1 }).toArray();
+    const transacciones = await db.collection('transacciones').find({ cuenta }).sort({ fecha: 1 }).toArray();
 
-  // Calculamos el saldo inicial restando los movimientos al saldo actual
-  let saldoEvolutivo = cuentaData.saldo;
-  transacciones.forEach(t => {
-    if (t.tipo === 'deposito') saldoEvolutivo -= t.monto;
-    if (t.tipo === 'retiro') saldoEvolutivo += t.monto;
-  });
-
-  let historial = [];
-  
-  // Agregamos un punto de partida inicial
-  historial.push({ 
-    fecha: new Date('2026-05-01T12:00:00Z').toISOString(), 
-    saldo: saldoEvolutivo 
-  });
-
-  // Reconstruimos la historia sumando/restando cada movimiento
-  transacciones.forEach(t => {
-    if (t.tipo === 'deposito') saldoEvolutivo += t.monto;
-    if (t.tipo === 'retiro') saldoEvolutivo -= t.monto;
-    historial.push({
-      fecha: t.fecha,
-      saldo: saldoEvolutivo
+    let saldoEvolutivo = cuentaData.saldo;
+    transacciones.forEach(t => {
+      if (t.tipo === 'deposito') saldoEvolutivo -= t.monto;
+      if (t.tipo === 'retiro') saldoEvolutivo += t.monto;
     });
-  });
 
-  res.json(historial);
+    let historial = [];
+    
+    const fechaInicio = transacciones.length > 0 
+      ? transacciones[0].fecha 
+      : new Date();
+    
+    historial.push({ 
+      fecha: fechaInicio,
+      saldo: saldoEvolutivo 
+    });
+
+    transacciones.forEach(t => {
+      if (t.tipo === 'deposito') saldoEvolutivo += t.monto;
+      if (t.tipo === 'retiro') saldoEvolutivo -= t.monto;
+      historial.push({
+        fecha: t.fecha,
+        saldo: saldoEvolutivo
+      });
+    });
+
+    res.json(historial);
+  } catch (error) {
+    console.error('Error en /api/historial:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
 });
 
 app.listen(3000, () => {
