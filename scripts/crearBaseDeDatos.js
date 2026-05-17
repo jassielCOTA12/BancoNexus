@@ -67,90 +67,105 @@ async function crearBD() {
         cuenta: '001',
         tipo: 'deposito',
         monto: 1000,
+        sucursal: 'CDMX',
         fecha: new Date()
       },
       {
         cuenta: '002',
         tipo: 'retiro',
         monto: 500,
+        sucursal: 'GDL',
         fecha: new Date()
       },
       {
         cuenta: '003',
         tipo: 'deposito',
         monto: 700,
+        sucursal: 'LPZ',
         fecha: new Date()
       },
       {
         cuenta: '004',
         tipo: 'retiro',
         monto: 1200,
+        sucursal: 'MTY',
         fecha: new Date()
       },
       {
         cuenta: '005',
         tipo: 'deposito',
         monto: 300,
+        sucursal: 'CUN',
         fecha: new Date()
       },
       {
         cuenta: '006',
         tipo: 'deposito',
         monto: 950,
+        sucursal: 'CDMX',
         fecha: new Date()
       },
       {
         cuenta: '007',
         tipo: 'retiro',
         monto: 400,
+        sucursal: 'GDL',
         fecha: new Date()
       },
       {
         cuenta: '008',
         tipo: 'deposito',
         monto: 1500,
+        sucursal: 'LPZ',
         fecha: new Date()
       },
       {
         cuenta: '009',
         tipo: 'retiro',
         monto: 250,
+        sucursal: 'MTY',
         fecha: new Date()
       },
       {
         cuenta: '010',
         tipo: 'deposito',
         monto: 2000,
+        sucursal: 'CUN',
         fecha: new Date()
       },
       {
         cuenta: '011',
         tipo: 'retiro',
         monto: 600,
+        sucursal: 'CDMX',
         fecha: new Date()
       },
       {
         cuenta: '012',
         tipo: 'deposito',
         monto: 1000,
+        sucursal: 'GDL',
         fecha: new Date()
       },
       {
         cuenta: '013',
         tipo: 'retiro',
         monto: 450,
+        sucursal: 'LPZ',
         fecha: new Date()
       },
       {
         cuenta: '014',
         tipo: 'deposito',
         monto: 800,
+        sucursal: 'MTY',
         fecha: new Date()
       },
       {
         cuenta: '015',
         tipo: 'deposito',
         monto: 5000,
+        sucursal: 'CUN',
         fecha: new Date()
       }
     ]);
