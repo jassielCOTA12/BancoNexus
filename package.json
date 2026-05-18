@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "backend": "cd backend && nodemon server.js",
-    "frontend": "cd frontend && PORT=3001 npm start",
+    "frontend": "cd frontend && cross-env PORT=3001 npm start",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\""
   },
   "repository": {
@@ -24,6 +24,7 @@
     "concurrently": "^9.2.1"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "nodemon": "^3.1.14"
   }
 }
