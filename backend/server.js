@@ -6,12 +6,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const uri = 'mongodb://localhost:27017';
+const uri = 'mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=rsBanco';
 const client = new MongoClient(uri);
 
 async function conectar() {
   await client.connect();
-  console.log(' Conectado a MongoDB');
+  console.log('Conectado a MongoDB Replica Set');
 }
 conectar();
 
@@ -56,7 +56,7 @@ app.post('/api/deposito', async (req, res) => {
     }
 
     if (typeof monto !== 'number' || monto <= 0) {
-      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+      return res.status(400).json({ error: 'El monto debe ser un numero positivo' });
     }
 
     const cuentaData = await db.collection('cuentas').findOne({ cuenta });
@@ -79,7 +79,7 @@ app.post('/api/deposito', async (req, res) => {
       fecha: new Date()
     });
 
-    res.json({ mensaje: 'Depósito exitoso', saldo: nuevoSaldo });
+    res.json({ mensaje: 'Deposito exitoso', saldo: nuevoSaldo });
   } catch (error) {
     console.error('Error en /api/deposito:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
@@ -96,7 +96,7 @@ app.post('/api/retiro', async (req, res) => {
     }
 
     if (typeof monto !== 'number' || monto <= 0) {
-      return res.status(400).json({ error: 'El monto debe ser un número positivo' });
+      return res.status(400).json({ error: 'El monto debe ser un numero positivo' });
     }
 
     const cuentaData = await db.collection('cuentas').findOne({ cuenta });
@@ -174,5 +174,5 @@ app.get('/api/historial/:cuenta', async (req, res) => {
 });
 
 app.listen(3000, () => {
-  console.log(' Backend corriendo en http://localhost:3000');
+  console.log('Backend corriendo en http://localhost:3000');
 });
