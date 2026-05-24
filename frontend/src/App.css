@@ -1,4 +1,3 @@
-/* App.css */
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -105,13 +104,30 @@ input:focus {
 }
 
 .mensaje-exito {
-  color: #16a34a; /* Verde de éxito */
+  color: #16a34a;
   font-size: 14px;
   margin-top: 10px;
   background-color: #dcfce7;
   padding: 8px;
   border-radius: 4px;
   text-align: center;
+}
+
+.alerta-red {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #ef4444;
+  padding: 15px;
+  margin-bottom: 25px;
+  border-radius: 6px;
+  text-align: center;
+  animation: parpadeo 2s infinite;
+}
+
+@keyframes parpadeo {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; background-color: #fee2e2; }
+  100% { opacity: 1; }
 }
 
 .btn-deposito { background-color: #16a34a; }

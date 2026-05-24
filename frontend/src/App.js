@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import './App.css';
 
-
 function App() {
   const [cuenta, setCuenta] = useState('');
   const [montoOperacion, setMontoOperacion] = useState('');
@@ -10,21 +9,39 @@ function App() {
   const [datosGrafica, setDatosGrafica] = useState([]); 
   const [error, setError] = useState('');
   const [mensajeExito, setMensajeExito] = useState('');
+  const [alertaRed, setAlertaRed] = useState(''); 
 
-  //Función para Consultar
-const consultarCuenta = async (numeroCuenta = cuenta) => {
+  // Función interceptora para detectar latencia o caídas de BD
+  const fetchConTimeout = async (url, opciones = {}, tiempoLimite = 1000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), tiempoLimite);
+    
+    try {
+      const response = await fetch(url, { ...opciones, signal: controller.signal });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      if (error.name === 'AbortError') {
+        throw new Error('Alerta de Latencia: El servidor está tardando demasiado.');
+      }
+      throw new Error('Error de conexión de red. El servidor backend o la base de datos están caídos.');
+    }
+  };
+
+  // Función para Consultar
+  const consultarCuenta = async (numeroCuenta = cuenta) => {
     try {
       setError('');
       setMensajeExito('');
+      setAlertaRed(''); 
       
-      //Pedimos los datos generales
-      const resCuenta = await fetch(`http://localhost:3000/api/cuenta/${numeroCuenta}`);
+      const resCuenta = await fetchConTimeout(`http://localhost:3000/api/cuenta/${numeroCuenta}`);
       if (!resCuenta.ok) throw new Error('No se encontró la cuenta.');
       const dataCuenta = await resCuenta.json();
       setDatosCuenta(dataCuenta);
 
-     // Pedimos el historial
-      const resHistorial = await fetch(`http://localhost:3000/api/historial/${numeroCuenta}`);
+      const resHistorial = await fetchConTimeout(`http://localhost:3000/api/historial/${numeroCuenta}`);
       const dataHistorial = await resHistorial.json();
       const formateado = dataHistorial.map(t => {
         const fechaObj = new Date(t.fecha);
@@ -36,25 +53,28 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
       
       setDatosGrafica(formateado);
       
-      setDatosGrafica(formateado);
-      
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Latencia') || err.message.includes('conexión')) {
+        setAlertaRed(err.message);
+      } else {
+        setError(err.message);
+      }
       setDatosCuenta(null);
       setDatosGrafica([]);
     }
   };
 
-  //Función para Depositar o Retirar
+  // Función para Depositar o Retirar
   const realizarOperacion = async (tipoOperacion) => {
     try {
       setError('');
       setMensajeExito('');
+      setAlertaRed('');
       
       const monto = parseFloat(montoOperacion);
       if (!monto || monto <= 0) throw new Error('Ingresa un monto válido mayor a 0');
 
-      const res = await fetch(`http://localhost:3000/api/${tipoOperacion}`, {
+      const res = await fetchConTimeout(`http://localhost:3000/api/${tipoOperacion}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -63,18 +83,23 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
         })
       });
 
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error);
+      }
+
       const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error);
-
       setMensajeExito(data.mensaje);
       setMontoOperacion('');
       
-      // Volvemos a consultar para actualizar el saldo y la gráfica en tiempo real
       consultarCuenta(datosCuenta.cuenta.cuenta);
 
     } catch (err) {
-      setError(err.message);
+      if (err.message.includes('Latencia') || err.message.includes('conexión')) {
+        setAlertaRed(err.message);
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -86,7 +111,14 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
       </header>
 
       <main className="banco-main">
-        {/* PANEL DE BÚSQUEDA */}
+        {/* BANNER DE ALERTA DE SISTEMA DISTRIBUIDO */}
+        {alertaRed && (
+          <div className="alerta-red">
+            <strong>⚠️ FALLO DE RED DISTRIBUIDA:</strong> <br/>
+            {alertaRed}
+          </div>
+        )}
+
         <section className="panel-consulta">
           <h2>Consulta de Cuenta</h2>
           <div className="input-group">
@@ -103,7 +135,6 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
           {mensajeExito && <p className="mensaje-exito">{mensajeExito}</p>}
         </section>
 
-        {/* SI LA CUENTA EXISTE, MOSTRAMOS TODO ESTO */}
         {datosCuenta && (
           <>
             <div className="resultados-consulta">
@@ -117,7 +148,6 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
               </div>
             </div>
 
-            {/* PANEL DE OPERACIONES */}
             <section className="panel-operaciones">
               <h2>Realizar Movimiento</h2>
               <div className="input-group">
@@ -132,12 +162,10 @@ const consultarCuenta = async (numeroCuenta = cuenta) => {
               </div>
             </section>
 
-            {/* GRÁFICA DE HISTORIAL */}
             <section className="panel-grafica">
               <h2>Evolución de Saldo</h2>
               <div style={{ width: '100%', height: 250, marginTop: '20px' }}>
                 <ResponsiveContainer>
-                  {/* Pasamos el estado de datosGrafica */}
                   <LineChart data={datosGrafica}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="fecha" style={{ fontSize: '12px' }}/>
