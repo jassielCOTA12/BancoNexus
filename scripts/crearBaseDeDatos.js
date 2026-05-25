@@ -2,7 +2,7 @@
 
 const { MongoClient } = require('mongodb');
 
-const uri = 'mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=rsBanco';
+const uri = "mongodb://localhost:27017/banco_nexus?directConnection=true";
 const client = new MongoClient(uri);
 
 async function crearBD() {
